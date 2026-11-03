@@ -25,9 +25,16 @@ class BeetrootInstaller {
                         stock INT NOT NULL DEFAULT 0,
                         price FLOAT NOT NULL DEFAULT 0,
                         code VARCHAR(50),
+                        image VARCHAR(255),
                         is_active TINYINT(1) NOT NULL DEFAULT 1,
                         created_at DATETIME
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                // Migracion liviana: si la tabla ya existia sin columna image, se agrega.
+                $cols = $pdo->query("SHOW COLUMNS FROM bw_product LIKE 'image'")->fetchAll();
+                if (empty($cols)) {
+                        $pdo->exec("ALTER TABLE bw_product ADD COLUMN image VARCHAR(255) AFTER code");
+                }
 
                 $pdo->exec("CREATE TABLE IF NOT EXISTS bw_client (
                         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -49,6 +56,19 @@ class BeetrootInstaller {
                         status ENUM('pendiente','pagada') NOT NULL DEFAULT 'pendiente',
                         created_at DATETIME,
                         INDEX idx_client (client_id),
+                        INDEX idx_product (product_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                // Pedido con multiples productos: cada deuda puede tener varias lineas
+                // (producto + cantidad + precio unitario). La suma de las lineas es el
+                // monto de la deuda; si no hay lineas se usa el campo product_id/quantity.
+                $pdo->exec("CREATE TABLE IF NOT EXISTS bw_debt_item (
+                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        debt_id INT NOT NULL,
+                        product_id INT NOT NULL,
+                        quantity INT NOT NULL DEFAULT 1,
+                        price FLOAT NOT NULL DEFAULT 0,
+                        INDEX idx_debt (debt_id),
                         INDEX idx_product (product_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 

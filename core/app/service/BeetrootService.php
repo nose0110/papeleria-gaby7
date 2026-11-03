@@ -102,12 +102,21 @@ class BeetrootService {
                 return \BeetrootDebtData::getById($id);
         }
 
-        /** Registra un pedido con deuda: resta stock si el producto existe. */
+        /** Registra un pedido con deuda: resta stock por cada linea de producto. */
         public function createDebt(array $data): void {
                 $debt = new \BeetrootDebtData();
                 $debt->create($data);
 
-                if (!empty($data['product_id'])) {
+                // Descuenta stock de las lineas (pedido con varios productos).
+                foreach (($data['items'] ?? []) as $it) {
+                        $product = \BeetrootProductData::getById((int)$it['product_id']);
+                        if ($product) {
+                                $product->addStock(-max(1, (int)$it['quantity']));
+                        }
+                }
+
+                // Compatibilidad con pedidos antiguos de un solo producto.
+                if (empty($data['items']) && !empty($data['product_id'])) {
                         $product = \BeetrootProductData::getById((int)$data['product_id']);
                         if ($product) {
                                 $product->addStock(-max(1, (int)($data['quantity'] ?? 1)));
@@ -118,6 +127,23 @@ class BeetrootService {
         public function updateDebt($id, array $data): void {
                 $debt = \BeetrootDebtData::getById($id);
                 if (!$debt) return;
+
+                // Si el pedido tiene lineas y llegan lineas nuevas, ajusta el stock
+                // (devuelve el antiguo y descuenta el nuevo).
+                $oldItems = \BeetrootDebtData::getItemsByDebt($debt->id);
+                $newItems = $data['items'] ?? null;
+
+                if ($newItems !== null) {
+                        foreach ($oldItems as $it) {
+                                $product = \BeetrootProductData::getById((int)$it->product_id);
+                                if ($product) $product->addStock((int)$it->quantity);
+                        }
+                        foreach ($newItems as $it) {
+                                $product = \BeetrootProductData::getById((int)$it['product_id']);
+                                if ($product) $product->addStock(-max(1, (int)$it['quantity']));
+                        }
+                }
+
                 $debt->update($data);
         }
 
@@ -126,6 +152,10 @@ class BeetrootService {
                 if (!$debt) return;
 
                 // Devuelve las unidades al inventario del modulo
+                foreach (\BeetrootDebtData::getItemsByDebt($debt->id) as $it) {
+                        $product = \BeetrootProductData::getById((int)$it->product_id);
+                        if ($product) $product->addStock((int)$it->quantity);
+                }
                 if ($debt->product_id) {
                         $product = \BeetrootProductData::getById($debt->product_id);
                         if ($product) {
@@ -133,6 +163,38 @@ class BeetrootService {
                         }
                 }
                 $debt->delete();
+        }
+
+        /** Adjunta a cada deuda sus abonos y sus lineas de productos (una sola consulta). */
+        public function attachDetails(array $debts): array {
+                $ids = array_map(fn($d) => (int)$d->id, $debts);
+                $itemsByDebt = \BeetrootDebtData::getItemsByDebts($ids);
+
+                foreach ($debts as $debt) {
+                        $debt->payments = \BeetrootDebtData::getPaymentsByDebt($debt->id);
+                        $debt->items = $itemsByDebt[$debt->id] ?? [];
+                }
+                return $debts;
+        }
+
+        // ---------- Buscador ----------
+
+        public function searchProducts(string $term): array {
+                return \BeetrootProductData::search($term);
+        }
+
+        /** Endpoint JSON para el buscador de productos del formulario de pedido. */
+        public function productSearch() {
+                header('Content-Type: application/json; charset=utf-8');
+                $results = \BeetrootProductData::search((string)Req::get('q', ''), 50);
+                echo json_encode(array_map(fn($p) => [
+                        'id' => (int)$p->id,
+                        'name' => $p->name,
+                        'code' => $p->code,
+                        'price' => (float)$p->price,
+                        'stock' => (int)$p->stock,
+                        'image' => $p->image,
+                ], $results));
         }
 
         // ---------- Abonos ----------

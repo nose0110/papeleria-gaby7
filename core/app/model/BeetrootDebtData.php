@@ -23,14 +23,75 @@ class BeetrootDebtData {
                         "insert into ".self::$tablename." (client_id, product_id, amount, quantity, paid, note, status, created_at)
                          values (:client_id, :product_id, :amount, :quantity, 0, :note, 'pendiente', NOW())"
                 );
+
+                // Total de unidades = suma de las lineas (o la cantidad suelta si no hay lineas).
+                $totalQty = (int)($d['quantity'] ?? 0);
+                if (!empty($d['items']) && is_array($d['items'])) {
+                        $totalQty = array_sum(array_map(fn($it) => (int)($it['quantity'] ?? 0), $d['items']));
+                }
+
                 $stmt->execute([
                         'client_id' => (int)$d['client_id'],
                         'product_id' => !empty($d['product_id']) ? (int)$d['product_id'] : null,
                         'amount' => (float)($d['amount'] ?? 0),
-                        'quantity' => (int)($d['quantity'] ?? 1),
+                        'quantity' => max(1, $totalQty),
                         'note' => $d['note'] ?? '',
                 ]);
                 $this->id = self::db()->lastInsertId();
+
+                self::saveItems($this->id, $d['items'] ?? []);
+        }
+
+        /** Guarda las lineas de productos del pedido (hasta muchos productos por cliente). */
+        public static function saveItems(int $debtId, array $items): void {
+                $pdo = self::db();
+                $del = $pdo->prepare("delete from bw_debt_item where debt_id = :id");
+                $del->execute(['id' => $debtId]);
+
+                $ins = $pdo->prepare(
+                        "insert into bw_debt_item (debt_id, product_id, quantity, price) values (:debt_id, :product_id, :quantity, :price)"
+                );
+                foreach ($items as $it) {
+                        if (empty($it['product_id']) || (int)($it['quantity'] ?? 0) <= 0) continue;
+                        $ins->execute([
+                                'debt_id' => $debtId,
+                                'product_id' => (int)$it['product_id'],
+                                'quantity' => (int)$it['quantity'],
+                                'price' => (float)($it['price'] ?? 0),
+                        ]);
+                }
+        }
+
+        /** Lineas de un pedido con nombre/codigo/imagen del producto. */
+        public static function getItemsByDebt($debtId): array {
+                $stmt = self::db()->prepare(
+                        "select i.*, p.name as product_name, p.code as product_code, p.image as product_image
+                         from bw_debt_item i
+                         join bw_product p on p.id = i.product_id
+                         where i.debt_id = :id
+                         order by p.name asc"
+                );
+                $stmt->execute(['id' => $debtId]);
+                return $stmt->fetchAll(\PDO::FETCH_OBJ);
+        }
+
+        public static function getItemsByDebts(array $debtIds): array {
+                if (empty($debtIds)) return [];
+                $pdo = self::db();
+                $placeholders = implode(',', array_fill(0, count($debtIds), '?'));
+                $stmt = $pdo->prepare(
+                        "select i.*, p.name as product_name, p.code as product_code, p.image as product_image
+                         from bw_debt_item i
+                         join bw_product p on p.id = i.product_id
+                         where i.debt_id in ($placeholders)
+                         order by p.name asc"
+                );
+                $stmt->execute(array_values($debtIds));
+                $grouped = [];
+                foreach ($stmt->fetchAll(\PDO::FETCH_OBJ) as $item) {
+                        $grouped[$item->debt_id][] = $item;
+                }
+                return $grouped;
         }
 
         public static function getById($id) {
@@ -66,18 +127,31 @@ class BeetrootDebtData {
                 $stmt = self::db()->prepare(
                         "update ".self::$tablename." set amount=:amount, quantity=:quantity, note=:note where id=:id"
                 );
+
+                $totalQty = (int)($d['quantity'] ?? 1);
+                if (!empty($d['items']) && is_array($d['items'])) {
+                        $totalQty = array_sum(array_map(fn($it) => (int)($it['quantity'] ?? 0), $d['items']));
+                }
+
                 $stmt->execute([
                         'amount' => (float)($d['amount'] ?? 0),
-                        'quantity' => (int)($d['quantity'] ?? 1),
+                        'quantity' => max(1, $totalQty),
                         'note' => $d['note'] ?? '',
                         'id' => $this->id,
                 ]);
+
+                if (isset($d['items']) && is_array($d['items'])) {
+                        self::saveItems($this->id, $d['items']);
+                }
+
                 self::refreshStatus($this->id);
         }
 
         public function delete(): void {
                 $pdo = self::db();
                 $stmt = $pdo->prepare("delete from bw_payment where debt_id = :id");
+                $stmt->execute(['id' => $this->id]);
+                $stmt = $pdo->prepare("delete from bw_debt_item where debt_id = :id");
                 $stmt->execute(['id' => $this->id]);
                 $stmt = $pdo->prepare("delete from ".self::$tablename." where id = :id");
                 $stmt->execute(['id' => $this->id]);

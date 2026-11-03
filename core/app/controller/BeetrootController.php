@@ -5,6 +5,7 @@ use App\Service\BeetrootInstaller;
 use App\Service\BeetrootService;
 use ViewEngine;
 use Req;
+use Upload;
 
 /**
  * Modulo "Beterrware": seccion completamente aparte para que la mama registre
@@ -33,7 +34,7 @@ class BeetrootController {
         public function index() {
                 ViewEngine::render('beetroot/dashboard.html.twig', [
                         'summary' => $this->service->getSummary(),
-                        'debts' => $this->service->getAllDebts(),
+                        'debts' => $this->service->attachDetails($this->service->getAllDebts()),
                 ]);
         }
 
@@ -41,7 +42,8 @@ class BeetrootController {
 
         public function products() {
                 ViewEngine::render('beetroot/products.html.twig', [
-                        'products' => $this->service->getAllProducts(),
+                        'products' => $this->service->searchProducts((string)Req::get('q', '')),
+                        'q' => (string)Req::get('q', ''),
                 ]);
         }
 
@@ -56,7 +58,9 @@ class BeetrootController {
                         return;
                 }
 
-                $this->service->createProduct(Req::post());
+                $data = Req::post();
+                $data['image'] = $this->handleImageUpload();
+                $this->service->createProduct($data);
                 $_SESSION['success'] = 'Producto agregado correctamente';
                 $this->redirect('/beterrware/products');
         }
@@ -81,7 +85,9 @@ class BeetrootController {
                         return;
                 }
 
-                $this->service->updateProduct($vars['id'], Req::post());
+                $data = Req::post();
+                $data['image'] = $this->handleImageUpload();
+                $this->service->updateProduct($vars['id'], $data);
                 $_SESSION['updated'] = 'Producto actualizado correctamente';
                 $this->redirect('/beterrware/products');
         }
@@ -156,11 +162,7 @@ class BeetrootController {
                 }
 
                 $debts = $this->service->getClientDebts($client->id);
-                $debtsWithPayments = [];
-                foreach ($debts as $debt) {
-                        $debt->payments = $this->service->getPaymentsByDebt($debt->id);
-                        $debtsWithPayments[] = $debt;
-                }
+                $debtsWithPayments = $this->service->attachDetails($debts);
 
                 ViewEngine::render('beetroot/client-show.html.twig', [
                         'client' => $client,
@@ -174,12 +176,9 @@ class BeetrootController {
 
         public function debts() {
                 $debts = $this->service->getAllDebts();
-                foreach ($debts as $debt) {
-                        $debt->payments = $this->service->getPaymentsByDebt($debt->id);
-                }
 
                 ViewEngine::render('beetroot/debts.html.twig', [
-                        'debts' => $debts,
+                        'debts' => $this->service->attachDetails($debts),
                         'clients' => $this->service->getAllClients(),
                         'products' => $this->service->getActiveProducts(),
                 ]);
@@ -195,6 +194,10 @@ class BeetrootController {
 
         public function createDebt() {
                 $errors = Req::validate(['client_id' => 'required', 'amount' => 'required']);
+                $items = $this->parseItems(Req::post());
+                if (empty($errors) && empty($items) && empty($_POST['product_id'])) {
+                        $errors['items'] = 'Agrega al menos un producto al pedido.';
+                }
                 if (!empty($errors)) {
                         ViewEngine::render('beetroot/debt-form.html.twig', [
                                 'mode' => 'new',
@@ -202,13 +205,37 @@ class BeetrootController {
                                 'products' => $this->service->getActiveProducts(),
                                 'errors' => $errors,
                                 'old' => Req::post(),
+                                'old_items' => $items,
                         ]);
                         return;
                 }
 
-                $this->service->createDebt(Req::post());
+                $data = Req::post();
+                $data['items'] = $items;
+                $this->service->createDebt($data);
                 $_SESSION['success'] = 'Pedido registrado correctamente';
                 $this->redirect('/beterrware/debts');
+        }
+
+        /** Convierte los arrays items[product_id][] / items[quantity][] en lineas limpias. */
+        private function parseItems(?array $post): array {
+                $raw = $post['items']['product_id'] ?? [];
+                $qtys = $post['items']['quantity'] ?? [];
+                $prices = $post['items']['price'] ?? [];
+                if (!is_array($raw)) $raw = [];
+
+                $items = [];
+                foreach ($raw as $i => $pid) {
+                        $pid = (int)$pid;
+                        $qty = max(1, (int)($qtys[$i] ?? 1));
+                        if ($pid <= 0) continue;
+                        $items[] = [
+                                'product_id' => $pid,
+                                'quantity' => $qty,
+                                'price' => (float)($prices[$i] ?? 0),
+                        ];
+                }
+                return $items;
         }
 
         public function editDebt($vars) {
@@ -217,20 +244,34 @@ class BeetrootController {
                         $this->redirect('/beterrware/debts');
                         return;
                 }
-                ViewEngine::render('beetroot/debt-edit.html.twig', ['debt' => $debt]);
+                $debt->items = \BeetrootDebtData::getItemsByDebt($debt->id);
+                ViewEngine::render('beetroot/debt-edit.html.twig', [
+                        'debt' => $debt,
+                        'products' => $this->service->getActiveProducts(),
+                ]);
         }
 
         public function updateDebt($vars) {
                 $errors = Req::validate(['amount' => 'required']);
+                $items = $this->parseItems(Req::post());
+                $debt = $this->service->getDebtById($vars['id']);
+                if (!$debt) {
+                        $this->redirect('/beterrware/debts');
+                        return;
+                }
                 if (!empty($errors)) {
+                        $debt->items = \BeetrootDebtData::getItemsByDebt($debt->id);
                         ViewEngine::render('beetroot/debt-edit.html.twig', [
-                                'debt' => $this->service->getDebtById($vars['id']),
+                                'debt' => $debt,
+                                'products' => $this->service->getActiveProducts(),
                                 'errors' => $errors,
                         ]);
                         return;
                 }
 
-                $this->service->updateDebt($vars['id'], Req::post());
+                $data = Req::post();
+                $data['items'] = $items;
+                $this->service->updateDebt($vars['id'], $data);
                 $_SESSION['updated'] = 'Deuda actualizada correctamente';
                 $this->redirect('/beterrware/debts');
         }
@@ -274,5 +315,31 @@ class BeetrootController {
                 $this->service->deletePayment((int)$vars['id']);
                 $_SESSION['deleted'] = 'Abono eliminado correctamente';
                 $this->redirect('/beterrware/debts');
+        }
+
+        // ---------- Utilidades ----------
+
+        /** Sube la imagen del producto a storage/beetroot/ (carpetas propias del modulo). */
+        private function handleImageUpload(): ?string {
+                if (empty($_FILES['image']) || $_FILES['image']['error'] === UPLOAD_ERR_NO_FILE) {
+                        return null;
+                }
+
+                \BeetrootProductData::ensureStorageDir();
+
+                $image = new Upload($_FILES['image']);
+                if (!$image->uploaded) {
+                        return null;
+                }
+
+                $image->allowed = ['image/*'];
+                $image->max_filesize = 5 * 1024 * 1024; // 5 MB
+                $image->image_resize = true;
+                $image->image_x = 600;
+                $image->image_ratio_y = true;
+                $image->image_convert = 'jpg';
+
+                $image->Process('storage/beetroot/');
+                return $image->processed ? $image->file_dst_name : null;
         }
 }
