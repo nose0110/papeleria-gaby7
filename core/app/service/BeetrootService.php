@@ -187,7 +187,8 @@ class BeetrootService {
         public function productSearch() {
                 header('Content-Type: application/json; charset=utf-8');
                 // Sin ?q= devuelve todos los activos (la vista lo usa para conocer nombres/precios).
-                $results = \BeetrootProductData::search((string)Req::get('q', ''), 2000);
+                // Req es global (core/controller/Req.php), no del namespace App\Service.
+                $results = \BeetrootProductData::search((string)\Req::get('q', ''), 2000);
                 echo json_encode(array_map(fn($p) => [
                         'id' => (int)$p->id,
                         'name' => $p->name,
