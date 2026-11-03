@@ -1,0 +1,38 @@
+{% extends "layouts/main.html.twig" %}
+{% block title %}Editar Deuda{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h1>Editar deuda / pendiente</h1>
+    <br>
+    <div class="card">
+      <div class="card-header">EDITAR PEDIDO #{{ debt.id }}</div>
+      <div class="card-body">
+        <div class="alert alert-info">
+          Abonado hasta ahora: <strong>${{ debt.paid|number_format(2) }}</strong><br>
+          Al cambiar el monto de la deuda, el pendiente se recalcula automaticamente (deuda - abonos).
+        </div>
+        <form method="post" action="{{ base_url }}/beterrware/debt/{{ debt.id }}/update">
+          {{ csrf_field() }}
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Dinero que debe (total)*</label>
+              <input type="number" name="amount" min="0" step="0.01" required class="form-control" value="{{ debt.amount }}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Numero de unidades</label>
+              <input type="number" name="quantity" min="1" step="1" class="form-control" value="{{ debt.quantity }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nota</label>
+            <input type="text" name="note" class="form-control" value="{{ debt.note|default('') }}">
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Actualizar Deuda</button>
+          <a href="{{ base_url }}/beterrware/debts" class="btn btn-link">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

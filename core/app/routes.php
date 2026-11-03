@@ -16,6 +16,7 @@ use App\Controller\AlertController;
 use App\Controller\SettingsController;
 use App\Controller\ProfileController;
 use App\Controller\AuthController;
+use App\Controller\BeetrootController;
 
 return function(FastRoute\RouteCollector $r) {
 	$r->addRoute('GET', '/', [HomeController::class, 'index']);
@@ -103,4 +104,31 @@ return function(FastRoute\RouteCollector $r) {
 
 	$r->addRoute('GET', '/settings', [SettingsController::class, 'index']);
 	$r->addRoute('POST', '/settings/update', [SettingsController::class, 'update']);
+
+	// ===== Modulo Beterrware (seccion aparte: productos, clientes, deudas y abonos) =====
+	$r->addRoute('GET', '/beterrware', [BeetrootController::class, 'index']);
+
+	$r->addRoute('GET', '/beterrware/products', [BeetrootController::class, 'products']);
+	$r->addRoute('GET', '/beterrware/product/new', [BeetrootController::class, 'newProduct']);
+	$r->addRoute('POST', '/beterrware/product/create', [BeetrootController::class, 'createProduct']);
+	$r->addRoute('GET', '/beterrware/product/{id:\d+}/edit', [BeetrootController::class, 'editProduct']);
+	$r->addRoute('POST', '/beterrware/product/{id:\d+}/update', [BeetrootController::class, 'updateProduct']);
+	$r->addRoute('POST', '/beterrware/product/{id:\d+}/delete', [BeetrootController::class, 'deleteProduct']);
+
+	$r->addRoute('GET', '/beterrware/clients', [BeetrootController::class, 'clients']);
+	$r->addRoute('GET', '/beterrware/client/new', [BeetrootController::class, 'newClient']);
+	$r->addRoute('POST', '/beterrware/client/create', [BeetrootController::class, 'createClient']);
+	$r->addRoute('GET', '/beterrware/client/{id:\d+}/edit', [BeetrootController::class, 'editClient']);
+	$r->addRoute('POST', '/beterrware/client/{id:\d+}/update', [BeetrootController::class, 'updateClient']);
+	$r->addRoute('POST', '/beterrware/client/{id:\d+}/delete', [BeetrootController::class, 'deleteClient']);
+	$r->addRoute('GET', '/beterrware/client/{id:\d+}', [BeetrootController::class, 'showClient']);
+
+	$r->addRoute('GET', '/beterrware/debts', [BeetrootController::class, 'debts']);
+	$r->addRoute('GET', '/beterrware/debt/new', [BeetrootController::class, 'newDebt']);
+	$r->addRoute('POST', '/beterrware/debt/create', [BeetrootController::class, 'createDebt']);
+	$r->addRoute('GET', '/beterrware/debt/{id:\d+}/edit', [BeetrootController::class, 'editDebt']);
+	$r->addRoute('POST', '/beterrware/debt/{id:\d+}/update', [BeetrootController::class, 'updateDebt']);
+	$r->addRoute('POST', '/beterrware/debt/{id:\d+}/delete', [BeetrootController::class, 'deleteDebt']);
+	$r->addRoute('POST', '/beterrware/debt/{id:\d+}/pay', [BeetrootController::class, 'addPayment']);
+	$r->addRoute('POST', '/beterrware/payment/{id:\d+}/delete', [BeetrootController::class, 'deletePayment']);
 };

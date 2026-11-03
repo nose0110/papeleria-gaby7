@@ -1,0 +1,43 @@
+{% extends "layouts/main.html.twig" %}
+{% block title %}{{ mode == 'new' ? 'Nuevo Cliente' : 'Editar Cliente' }}{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h1>{{ mode == 'new' ? 'Nuevo Cliente' : 'Editar Cliente' }}</h1>
+    <br>
+    <div class="card">
+      <div class="card-header">{{ mode == 'new' ? 'NUEVO CLIENTE' : 'EDITAR CLIENTE' }}</div>
+      <div class="card-body">
+        <form method="post" action="{{ mode == 'new' ? base_url ~ '/beterrware/client/create' : base_url ~ '/beterrware/client/' ~ client.id ~ '/update' }}">
+          {{ csrf_field() }}
+          <div class="mb-3">
+            <label class="form-label">Nombre*</label>
+            <input type="text" name="name" required class="form-control"
+                   value="{{ client.name|default(old.name|default('')) }}" placeholder="Nombre del cliente">
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Telefono</label>
+              <input type="text" name="phone" class="form-control"
+                     value="{{ client.phone|default(old.phone|default('')) }}" placeholder="Ej. 555-123-4567">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Direccion</label>
+              <input type="text" name="address" class="form-control"
+                     value="{{ client.address|default(old.address|default('')) }}" placeholder="Direccion">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nota</label>
+            <textarea name="note" class="form-control" rows="2" placeholder="Notas sobre el cliente">{{ client.note|default(old.note|default('')) }}</textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> {{ mode == 'new' ? 'Agregar Cliente' : 'Actualizar Cliente' }}
+          </button>
+          <a href="{{ base_url }}/beterrware/clients" class="btn btn-link">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

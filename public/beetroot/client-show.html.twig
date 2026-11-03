@@ -1,0 +1,76 @@
+{% extends "layouts/main.html.twig" %}
+{% block title %}{{ client.name }} - Ficha{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <h1><i class="bi bi-person"></i> {{ client.name }}</h1>
+    <p class="text-muted">
+      Telefono: {{ client.phone|default('-') }} | Direccion: {{ client.address|default('-') }}
+    </p>
+
+    <div class="alert alert-{{ total_pending > 0 ? 'warning' : 'success' }}">
+      <strong>Dinero pendiente total:</strong> ${{ total_pending|number_format(2) }}
+    </div>
+
+    <a href="{{ base_url }}/beterrware/debt/new" class="btn btn-secondary"><i class="bi bi-plus-lg"></i> Nuevo pedido con deuda</a>
+    <a href="{{ base_url }}/beterrware/client/{{ client.id }}/edit" class="btn btn-warning"><i class="bi bi-pencil"></i> Editar cliente</a>
+    <a href="{{ base_url }}/beterrware/clients" class="btn btn-link">Volver a clientes</a>
+    <br><br>
+
+    <div class="card">
+      <div class="card-header">PRODUCTOS PEDIDOS Y DEUDAS</div>
+      <div class="card-body p-0">
+        {% if debts|length > 0 %}
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover table-sm mb-0 no-datatable">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Deuda</th><th>Abonado</th><th>Pendiente</th><th>Estado</th><th>Abonos</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for debt in debts %}
+              <tr>
+                <td>{{ debt.created_at }}</td>
+                <td>{{ debt.product_name|default('(sin producto)') }}</td>
+                <td>{{ debt.quantity }}</td>
+                <td>${{ debt.amount|number_format(2) }}</td>
+                <td>${{ debt.paid|number_format(2) }}</td>
+                <td class="fw-bold">{{ debt.status == 'pendiente' ? '$' ~ debt.pending|number_format(2) : '$0.00' }}</td>
+                <td>
+                  {% if debt.status == 'pagada' %}
+                    <span class="badge bg-success">Pagada</span>
+                  {% else %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% for payment in debt.payments %}
+                    <div><small>+${{ payment.amount|number_format(2) }} <span class="text-muted">({{ payment.created_at }})</span></small></div>
+                  {% else %}
+                    <small class="text-muted">Sin abonos</small>
+                  {% endfor %}
+                </td>
+                <td style="width:230px;">
+                  {% if debt.status == 'pendiente' %}
+                  <form action="{{ base_url }}/beterrware/debt/{{ debt.id }}/pay" method="POST" class="d-inline-flex align-items-center gap-1">
+                    {{ csrf_field() }}
+                    <input type="number" name="amount" step="0.01" min="0.01" required class="form-control form-control-sm" style="width:90px;" placeholder="Abono">
+                    <button type="submit" class="btn btn-success btn-xs">Abonar</button>
+                  </form>
+                  {% endif %}
+                  <a href="{{ base_url }}/beterrware/debt/{{ debt.id }}/edit" class="btn btn-warning btn-xs mt-1">Editar</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="alert alert-secondary m-3">Este cliente aun no tiene pedidos registrados.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

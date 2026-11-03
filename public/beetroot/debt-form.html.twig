@@ -1,0 +1,73 @@
+{% extends "layouts/main.html.twig" %}
+{% block title %}Nuevo Pedido con Deuda{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h1>Nuevo pedido con deuda</h1>
+    <br>
+    <div class="card">
+      <div class="card-header">REGISTRAR PEDIDO</div>
+      <div class="card-body">
+        <form method="post" action="{{ base_url }}/beterrware/debt/create">
+          {{ csrf_field() }}
+          <div class="mb-3">
+            <label class="form-label">Cliente*</label>
+            <select name="client_id" required class="form-select">
+              <option value="">-- Selecciona un cliente --</option>
+              {% for client in clients %}
+                <option value="{{ client.id }}" {{ old.client_id|default('') == client.id ? 'selected' : '' }}>{{ client.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Producto (opcional)</label>
+            <select name="product_id" class="form-select">
+              <option value="">-- Sin producto / varios productos --</option>
+              {% for product in products %}
+                <option value="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock }}"
+                        {{ old.product_id|default('') == product.id ? 'selected' : '' }}>
+                  {{ product.name }} (stock: {{ product.stock }}) - ${{ product.price|number_format(2) }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Numero de unidades</label>
+              <input type="number" name="quantity" min="1" step="1" value="{{ old.quantity|default(1) }}" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Dinero que debe*</label>
+              <input type="number" name="amount" id="amount" min="0" step="0.01" required value="{{ old.amount|default('') }}" class="form-control" placeholder="0.00">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nota</label>
+            <input type="text" name="note" class="form-control" value="{{ old.note|default('') }}" placeholder="Ej. pedido para el viernes">
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Registrar Pedido</button>
+          <a href="{{ base_url }}/beterrware/debts" class="btn btn-link">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // Al elegir producto, sugiere el monto = precio * cantidad
+  document.addEventListener('DOMContentLoaded', function () {
+    var sel = document.querySelector('select[name=product_id]');
+    var qty = document.querySelector('input[name=quantity]');
+    var amount = document.getElementById('amount');
+    if (!sel || !qty || !amount) return;
+    function fill() {
+      var opt = sel.options[sel.selectedIndex];
+      if (!opt || !opt.value) return;
+      var price = parseFloat(opt.dataset.price || 0);
+      var q = parseInt(qty.value || 1, 10);
+      amount.value = (price * (isNaN(q) ? 1 : q)).toFixed(2);
+    }
+    sel.addEventListener('change', fill);
+    qty.addEventListener('change', fill);
+  });
+</script>
+{% endblock %}

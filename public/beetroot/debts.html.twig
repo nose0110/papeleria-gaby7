@@ -1,0 +1,83 @@
+{% extends "layouts/main.html.twig" %}
+{% block title %}Beterrware - Deudas y Abonos{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <h1>Deudas y Abonos</h1>
+    <a href="{{ base_url }}/beterrware/debt/new" class="btn btn-secondary"><i class="bi bi-plus-lg"></i> Nuevo pedido con deuda</a>
+    <br><br>
+
+    {% if clients|length == 0 %}
+      <div class="alert alert-warning">Primero agrega <a href="{{ base_url }}/beterrware/client/new">clientes</a> para poder registrar pedidos.</div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header">PEDIDOS / DEUDAS</div>
+      <div class="card-body p-0">
+        {% if debts|length > 0 %}
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Cliente</th><th>Producto</th><th>Cantidad</th><th>Deuda</th><th>Abonado</th><th>Pendiente</th><th>Estado</th><th>Abonos</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for debt in debts %}
+              <tr>
+                <td>{{ debt.created_at }}</td>
+                <td><a href="{{ base_url }}/beterrware/client/{{ debt.client_id }}">{{ debt.client_name }}</a></td>
+                <td>{{ debt.product_name|default('(sin producto)') }}</td>
+                <td>{{ debt.quantity }}</td>
+                <td>${{ debt.amount|number_format(2) }}</td>
+                <td>${{ debt.paid|number_format(2) }}</td>
+                <td class="fw-bold">{{ debt.status == 'pendiente' ? '$' ~ debt.pending|number_format(2) : '$0.00' }}</td>
+                <td>
+                  {% if debt.status == 'pagada' %}
+                    <span class="badge bg-success">Pagada</span>
+                  {% else %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% for payment in debt.payments %}
+                    <div class="d-flex align-items-center gap-1">
+                      <small>+${{ payment.amount|number_format(2) }} <span class="text-muted">({{ payment.created_at }})</span></small>
+                      <form action="{{ base_url }}/beterrware/payment/{{ payment.id }}/delete" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar este abono?');">
+                        {{ csrf_field() }}
+                        <button type="submit" class="btn btn-link btn-sm text-danger p-0" title="Eliminar abono"><i class="bi bi-x-circle"></i></button>
+                      </form>
+                    </div>
+                  {% else %}
+                    <small class="text-muted">Sin abonos</small>
+                  {% endfor %}
+                </td>
+                <td style="width:240px;">
+                  {% if debt.status == 'pendiente' %}
+                  <form action="{{ base_url }}/beterrware/debt/{{ debt.id }}/pay" method="POST" class="d-inline-flex align-items-center gap-1">
+                    {{ csrf_field() }}
+                    <input type="number" name="amount" step="0.01" min="0.01" required class="form-control form-control-sm" style="width:95px;" placeholder="Abono">
+                    <button type="submit" class="btn btn-success btn-xs">Abonar</button>
+                  </form>
+                  {% endif %}
+                  <div class="mt-1">
+                    <a href="{{ base_url }}/beterrware/debt/{{ debt.id }}/edit" class="btn btn-warning btn-xs">Editar</a>
+                    <form action="{{ base_url }}/beterrware/debt/{{ debt.id }}/delete" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta deuda y sus abonos?');">
+                      {{ csrf_field() }}
+                      <button type="submit" class="btn btn-danger btn-xs">Eliminar</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="alert alert-secondary m-3">No hay deudas registradas.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
