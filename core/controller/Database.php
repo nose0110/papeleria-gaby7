@@ -7,7 +7,16 @@ class Database {
 	public $user, $pass, $host, $ddbb;
 
 	function __construct(){
-		$this->user="root";$this->pass="";$this->host="localhost";$this->ddbb="inventiolite";
+		// Credenciales: usa variables de entorno si existen (produccion/Hostinger),
+		// con valores por defecto para desarrollo local (XAMPP).
+		$env = function($key, $default){
+			$v = getenv($key);
+			return ($v !== false && $v !== '') ? $v : $default;
+		};
+		$this->user = $env('DB_USER', "root");
+		$this->pass = $env('DB_PASS', "");
+		$this->host = $env('DB_HOST', "localhost");
+		$this->ddbb = $env('DB_NAME', "inventiolite");
 	}
 
 	function connect(){
