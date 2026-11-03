@@ -1,6 +1,8 @@
 {% extends "layouts/main.html.twig" %}
 {% block title %}{{ client.name }} - Ficha{% endblock %}
 {% block content %}
+<div class="bw-page">
+
 <div class="row">
   <div class="col-md-12">
     <h1><i class="bi bi-person"></i> {{ client.name }}</h1>
@@ -83,4 +85,5 @@
     </div>
   </div>
 </div>
+</div><!-- /.bw-page -->
 {% endblock %}

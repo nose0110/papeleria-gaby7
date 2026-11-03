@@ -1,6 +1,8 @@
 {% extends "layouts/main.html.twig" %}
 {% block title %}{{ mode == 'new' ? 'Nuevo Producto' : 'Editar Producto' }}{% endblock %}
 {% block content %}
+<div class="bw-page">
+
 <div class="row">
   <div class="col-md-8">
     <h1>{{ mode == 'new' ? 'Nuevo Producto' : 'Editar Producto' }}</h1>
@@ -20,7 +22,7 @@
             <label class="form-label">Descripcion</label>
             <textarea name="description" class="form-control" rows="3" placeholder="Descripcion del producto">{{ product.description|default(old.description|default('')) }}</textarea>
           </div>
-          <div class="row">
+<div class="row">
             <div class="col-md-4 mb-3">
               <label class="form-label">Stock</label>
               <input type="number" name="stock" min="0" step="1" class="form-control"
@@ -58,4 +60,5 @@
     </div>
   </div>
 </div>
+</div><!-- /.bw-page -->
 {% endblock %}
