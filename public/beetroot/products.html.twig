@@ -14,12 +14,20 @@
           <table class="table table-bordered table-hover table-sm mb-0">
             <thead>
               <tr>
-                <th>Codigo</th><th>Nombre</th><th>Descripcion</th><th>Stock</th><th>Precio</th><th>Estado</th><th></th>
+                <th>Imagen</th><th>Codigo</th><th>Nombre</th><th>Descripcion</th><th>Stock</th><th>Precio</th><th>Estado</th><th></th>
               </tr>
             </thead>
             <tbody>
               {% for product in products %}
               <tr>
+                <td>
+                  {% if product.image %}
+                    <img src="{{ base_url }}/storage/beetroot/{{ product.image }}" alt="{{ product.name }}"
+                         class="rounded border" style="width:48px;height:48px;object-fit:cover;">
+                  {% else %}
+                    <span class="bi bi-image text-muted" style="font-size:1.5rem;"></span>
+                  {% endif %}
+                </td>
                 <td>{{ product.code|default('-') }}</td>
                 <td>{{ product.name }}</td>
                 <td>{{ product.description|default('') }}</td>

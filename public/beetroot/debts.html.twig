@@ -27,7 +27,17 @@
               <tr>
                 <td>{{ debt.created_at }}</td>
                 <td><a href="{{ base_url }}/beterrware/client/{{ debt.client_id }}">{{ debt.client_name }}</a></td>
-                <td>{{ debt.product_name|default('(sin producto)') }}</td>
+                <td>
+                  {% if debt.items|length > 0 %}
+                    <ul class="mb-0 ps-3">
+                      {% for item in debt.items %}
+                        <li><small>{{ item.product_name }} &times; {{ item.quantity }}</small></li>
+                      {% endfor %}
+                    </ul>
+                  {% else %}
+                    {{ debt.product_name|default('(varios / sin producto)') }}
+                  {% endif %}
+                </td>
                 <td>{{ debt.quantity }}</td>
                 <td>${{ debt.amount|number_format(2) }}</td>
                 <td>${{ debt.paid|number_format(2) }}</td>

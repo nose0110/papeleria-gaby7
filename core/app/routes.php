@@ -131,4 +131,6 @@ return function(FastRoute\RouteCollector $r) {
 	$r->addRoute('POST', '/beterrware/debt/{id:\d+}/delete', [BeetrootController::class, 'deleteDebt']);
 	$r->addRoute('POST', '/beterrware/debt/{id:\d+}/pay', [BeetrootController::class, 'addPayment']);
 	$r->addRoute('POST', '/beterrware/payment/{id:\d+}/delete', [BeetrootController::class, 'deletePayment']);
+	// Buscador AJAX de productos (para el carrito del "Nuevo pedido con deuda")
+	$r->addRoute('GET', '/beterrware/products/search', [BeetrootController::class, 'productSearch']);
 };

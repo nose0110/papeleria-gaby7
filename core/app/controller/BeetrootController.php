@@ -193,10 +193,22 @@ class BeetrootController {
         }
 
         public function createDebt() {
-                $errors = Req::validate(['client_id' => 'required', 'amount' => 'required']);
+                $errors = Req::validate(['client_id' => 'required']);
                 $items = $this->parseItems(Req::post());
-                if (empty($errors) && empty($items) && empty($_POST['product_id'])) {
-                        $errors['items'] = 'Agrega al menos un producto al pedido.';
+
+                // El total de la deuda se calcula a partir de la lista de productos.
+                $calculated = 0.0;
+                foreach ($items as $it) {
+                        $calculated += $it['price'] * $it['quantity'];
+                }
+                if ($calculated > 0) {
+                        $_POST['amount'] = round($calculated, 2);
+                } elseif (empty($_POST['amount'])) {
+                        $_POST['amount'] = 0;
+                }
+
+                if (empty($errors) && empty($items)) {
+                        $errors['items'] = 'Agrega al menos un producto a la lista del pedido.';
                 }
                 if (!empty($errors)) {
                         ViewEngine::render('beetroot/debt-form.html.twig', [
@@ -318,6 +330,17 @@ class BeetrootController {
         }
 
         // ---------- Utilidades ----------
+
+        /** Endpoint JSON del buscador de productos (usado por el carrito del pedido). */
+        public function productSearch() {
+                if (!isset($_SESSION['user_id'])) {
+                        http_response_code(401);
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode([]);
+                        return;
+                }
+                $this->service->productSearch();
+        }
 
         /** Sube la imagen del producto a storage/beetroot/ (carpetas propias del modulo). */
         private function handleImageUpload(): ?string {

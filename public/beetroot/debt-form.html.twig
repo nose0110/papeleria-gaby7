@@ -2,13 +2,13 @@
 {% block title %}Nuevo Pedido con Deuda{% endblock %}
 {% block content %}
 <div class="row">
-  <div class="col-md-8">
+  <div class="col-lg-5">
     <h1>Nuevo pedido con deuda</h1>
     <br>
-    <div class="card">
-      <div class="card-header">REGISTRAR PEDIDO</div>
+    <div class="card mb-3">
+      <div class="card-header">DATOS DEL PEDIDO</div>
       <div class="card-body">
-        <form method="post" action="{{ base_url }}/beterrware/debt/create">
+        <form method="post" action="{{ base_url }}/beterrware/debt/create" id="debt-form">
           {{ csrf_field() }}
           <div class="mb-3">
             <label class="form-label">Cliente*</label>
@@ -19,55 +19,224 @@
               {% endfor %}
             </select>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Producto (opcional)</label>
-            <select name="product_id" class="form-select">
-              <option value="">-- Sin producto / varios productos --</option>
-              {% for product in products %}
-                <option value="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock }}"
-                        {{ old.product_id|default('') == product.id ? 'selected' : '' }}>
-                  {{ product.name }} (stock: {{ product.stock }}) - ${{ product.price|number_format(2) }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Numero de unidades</label>
-              <input type="number" name="quantity" min="1" step="1" value="{{ old.quantity|default(1) }}" class="form-control">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Dinero que debe*</label>
-              <input type="number" name="amount" id="amount" min="0" step="0.01" required value="{{ old.amount|default('') }}" class="form-control" placeholder="0.00">
-            </div>
-          </div>
+
+          <!-- Lineas del pedido: se llenan con el buscador de abajo -->
+          <div id="hidden-items"></div>
+
           <div class="mb-3">
             <label class="form-label">Nota</label>
             <input type="text" name="note" class="form-control" value="{{ old.note|default('') }}" placeholder="Ej. pedido para el viernes">
           </div>
-          <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Registrar Pedido</button>
-          <a href="{{ base_url }}/beterrware/debts" class="btn btn-link">Cancelar</a>
+
+          <div class="alert alert-secondary d-flex justify-content-between align-items-center mb-3 py-2">
+            <span>Total de la lista:</span>
+            <strong id="grand-total" style="font-size:1.2rem;">$0.00</strong>
+          </div>
+
+          <button type="submit" id="submit-btn" class="btn btn-primary w-100" disabled>
+            <i class="bi bi-save"></i> Guardar Pedido con Deuda
+          </button>
+          <a href="{{ base_url }}/beterrware/debts" class="btn btn-link w-100">Cancelar</a>
         </form>
       </div>
     </div>
   </div>
+
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-search"></i> BUSCAR PRODUCTOS Y AGREGAR A LA LISTA</div>
+      <div class="card-body">
+        <input type="text" id="product-search" class="form-control mb-2" autocomplete="off"
+               placeholder="Escribe el nombre o codigo del producto...">
+        <div id="search-results" class="list-group mb-3" style="max-height:260px; overflow-y:auto;"></div>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle mb-0">
+            <thead>
+              <tr><th colspan="4" class="bg-light">Productos del pedido <span id="item-count" class="badge bg-secondary">0</span></th></tr>
+              <tr><th>Producto</th><th style="width:90px;">Cant.</th><th style="width:110px;">Precio</th><th style="width:100px;">Subtotal</th></tr>
+            </thead>
+            <tbody id="cart-body">
+              <tr id="empty-row"><td colspan="4" class="text-center text-muted py-3">Aun no hay productos en la lista. Busca arriba y agregalos.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
 <script>
-  // Al elegir producto, sugiere el monto = precio * cantidad
-  document.addEventListener('DOMContentLoaded', function () {
-    var sel = document.querySelector('select[name=product_id]');
-    var qty = document.querySelector('input[name=quantity]');
-    var amount = document.getElementById('amount');
-    if (!sel || !qty || !amount) return;
-    function fill() {
-      var opt = sel.options[sel.selectedIndex];
-      if (!opt || !opt.value) return;
-      var price = parseFloat(opt.dataset.price || 0);
-      var q = parseInt(qty.value || 1, 10);
-      amount.value = (price * (isNaN(q) ? 1 : q)).toFixed(2);
-    }
-    sel.addEventListener('change', fill);
-    qty.addEventListener('change', fill);
+(function () {
+  var BASE = '{{ base_url }}';
+  var SEARCH_URL = BASE + '/beterrware/products/search';
+  var items = []; // {product_id, name, code, image, stock, quantity, price}
+
+  var searchInput = document.getElementById('product-search');
+  var resultsBox = document.getElementById('search-results');
+  var cartBody = document.getElementById('cart-body');
+  var emptyRow = document.getElementById('empty-row');
+  var hiddenBox = document.getElementById('hidden-items');
+  var grandTotalEl = document.getElementById('grand-total');
+  var itemCountEl = document.getElementById('item-count');
+  var submitBtn = document.getElementById('submit-btn');
+  var debounceTimer = null;
+
+  function money(n) { return '$' + (isNaN(n) ? 0 : n).toFixed(2); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // ---------- Buscador AJAX ----------
+  searchInput.addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    var term = searchInput.value.trim();
+    if (term.length === 0) { resultsBox.innerHTML = ''; return; }
+    debounceTimer = setTimeout(function () { doSearch(term); }, 250);
   });
+
+  function doSearch(term) {
+    fetch(SEARCH_URL + '?q=' + encodeURIComponent(term))
+      .then(function (r) { return r.json(); })
+      .then(function (list) { list.forEach(indexProduct); renderResults(list); })
+      .catch(function () { resultsBox.innerHTML = '<div class="list-group-item text-danger">Error al buscar.</div>'; });
+  }
+
+  // Cache local de productos: id -> {name, price, stock}
+  var catalog = {};
+  function indexProduct(p) { catalog[p.id] = { name: p.name, price: parseFloat(p.price) || 0, stock: parseInt(p.stock, 10) || 0 }; }
+
+  function addProductById(id, qty) {
+    id = parseInt(id, 10);
+    qty = Math.max(1, parseInt(qty, 10) || 1);
+    var found = items.find(function (it) { return it.product_id === id; });
+    if (found) { found.quantity += qty; renderCart(); return; }
+    var info = catalog[id] || { name: 'Producto #' + id, price: 0, stock: 0 };
+    items.push({ product_id: id, name: info.name, price: info.price, stock: info.stock, quantity: qty });
+    renderCart();
+  }
+
+  function renderResults(list) {
+    if (!list.length) {
+      resultsBox.innerHTML = '<div class="list-group-item text-muted">No se encontraron productos.</div>';
+      return;
+    }
+    resultsBox.innerHTML = list.map(function (p) {
+      var img = p.image
+        ? '<img src="' + BASE + '/storage/beetroot/' + esc(p.image) + '" class="rounded me-2" style="width:36px;height:36px;object-fit:cover;">'
+        : '<span class="bi bi-image rounded bg-light me-2 d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px;"></span>';
+      return '<button type="button" class="list-group-item list-group-item-action d-flex align-items-center" data-id="' + p.id + '">' +
+        img +
+        '<span class="flex-grow-1">' +
+          '<strong>' + esc(p.name) + '</strong>' +
+          (p.code ? ' <small class="text-muted">(' + esc(p.code) + ')</small>' : '') +
+          '<br><small>' + money(p.price) + ' &middot; stock: ' + p.stock + '</small>' +
+        '</span>' +
+        '<span class="btn btn-sm btn-success"><i class="bi bi-plus-lg"></i> Agregar</span>' +
+        '</button>';
+    }).join('');
+  }
+
+  resultsBox.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-id]');
+    if (!btn) return;
+    addProductById(btn.dataset.id, 1);
+  });
+
+  // ---------- Lista (carrito) ----------
+  window.bwChangeQty = function (id, delta) {
+    var it = items.find(function (x) { return x.product_id === id; });
+    if (!it) return;
+    it.quantity = Math.max(1, it.quantity + delta);
+    renderCart();
+  };
+  window.bwSetPrice = function (id, val) {
+    var it = items.find(function (x) { return x.product_id === id; });
+    if (it) { it.price = parseFloat(val) || 0; renderTotals(); }
+  };
+  window.bwRemove = function (id) {
+    items = items.filter(function (x) { return x.product_id !== id; });
+    renderCart();
+  };
+
+  function renderCart() {
+    if (!items.length) {
+      cartBody.innerHTML = '';
+      cartBody.appendChild(emptyRow);
+    } else {
+      cartBody.innerHTML = items.map(function (it) {
+        return '<tr>' +
+          '<td>' + esc(it.name) + ' <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1" onclick="bwRemove(' + it.product_id + ')" title="Quitar"><i class="bi bi-x-circle"></i></button></td>' +
+          '<td><div class="input-group input-group-sm">' +
+            '<button type="button" class="btn btn-outline-secondary" onclick="bwChangeQty(' + it.product_id + ',-1)">-</button>' +
+            '<input type="number" class="form-control text-center" min="1" value="' + it.quantity + '" onchange="var t=items.find(function(x){return x.product_id===' + it.product_id + '});if(t){t.quantity=Math.max(1,parseInt(this.value)||1);renderCart();}">' +
+            '<button type="button" class="btn btn-outline-secondary" onclick="bwChangeQty(' + it.product_id + ',1)">+</button>' +
+          '</div></td>' +
+          '<td><input type="number" step="0.01" min="0" class="form-control form-control-sm" value="' + it.price.toFixed(2) + '" oninput="bwSetPrice(' + it.product_id + ', this.value)"></td>' +
+          '<td class="text-end" data-subtotal="' + it.product_id + '">' + money(it.price * it.quantity) + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+    renderTotals();
+    syncHidden();
+  }
+
+  function renderTotals() {
+    var total = 0;
+    items.forEach(function (it) {
+      total += it.price * it.quantity;
+      var cell = cartBody.querySelector('[data-subtotal="' + it.product_id + '"]');
+      if (cell) cell.textContent = money(it.price * it.quantity);
+    });
+    grandTotalEl.textContent = money(total);
+    itemCountEl.textContent = items.length;
+    submitBtn.disabled = items.length === 0;
+  }
+
+  // El servidor espera arrays items[product_id][] / items[quantity][] / items[price][]
+  function syncHidden() {
+    hiddenBox.innerHTML = items.map(function (it) {
+      return '<input type="hidden" name="items[product_id][]" value="' + it.product_id + '">' +
+             '<input type="hidden" name="items[quantity][]" value="' + it.quantity + '">' +
+             '<input type="hidden" name="items[price][]" value="' + it.price.toFixed(2) + '">';
+    }).join('');
+    // amount = total de la lista (el servidor lo recalcula a partir de las lineas)
+    var existing = document.getElementById('amount-hidden');
+    if (existing) existing.remove();
+    var total = 0;
+    items.forEach(function (it) { total += it.price * it.quantity; });
+    var h = document.createElement('input');
+    h.type = 'hidden'; h.name = 'amount'; h.id = 'amount-hidden'; h.value = total.toFixed(2);
+    hiddenBox.appendChild(h);
+  }
+
+  // Repintar subtotal al cambiar precio sin re-renderizar el input activo
+  window.items = items;
+  window.renderCart = renderCart;
+
+  // Cargar el catalogo al abrir la pagina (para restaurar listas y mostrar nombres)
+  fetch(SEARCH_URL + '?q=')
+    .then(function (r) { return r.json(); })
+    .then(function (list) { list.forEach(indexProduct); restoreOldItems(); })
+    .catch(restoreOldItems);
+
+  function restoreOldItems() {
+    {% if old_items is defined and old_items|length > 0 %}
+    {% for it in old_items %}
+    addProductById({{ it.product_id }}, {{ it.quantity }});
+    {% endfor %}
+    // Ajustar los precios que llegaron del post (pueden diferir del catalogo)
+    {% for it in old_items %}
+    var _it = items.find(function (x) { return x.product_id === {{ it.product_id }}; });
+    if (_it) _it.price = {{ it.price }};
+    {% endfor %}
+    renderCart();
+    {% else %}
+    renderCart();
+    {% endif %}
+  }
+})();
 </script>
 {% endblock %}
