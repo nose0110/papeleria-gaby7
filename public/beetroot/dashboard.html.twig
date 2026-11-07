@@ -1,0 +1,87 @@
+{% extends "layouts/main.html.twig" %}
+{% block title %}Beterrware - Panel{% endblock %}
+{% block content %}
+<div class="bw-page">
+
+<div class="row">
+  <div class="col-md-12">
+    <h1><i class="bi bi-flower1 text-success"></i> Beterrware</h1>
+    <p class="text-muted">Seccion independiente para la gestion de productos, clientes, deudas y abonos.</p>
+
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-white bg-primary h-100">
+          <div class="card-body">
+            <div class="fs-3 fw-bold">{{ summary.clients }}</div>
+            <div>Clientes</div>
+            <a href="{{ base_url }}/beterrware/clients" class="btn btn-sm btn-light mt-2">Ver clientes</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-white bg-success h-100">
+          <div class="card-body">
+            <div class="fs-3 fw-bold">{{ summary.products }}</div>
+            <div>Productos activos</div>
+            <a href="{{ base_url }}/beterrware/products" class="btn btn-sm btn-light mt-2">Ver productos</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-white bg-warning h-100">
+          <div class="card-body">
+            <div class="fs-3 fw-bold">{{ summary.pending_debts }}</div>
+            <div>Deudas pendientes</div>
+            <a href="{{ base_url }}/beterrware/debts" class="btn btn-sm btn-light mt-2">Ver deudas</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-white bg-danger h-100">
+          <div class="card-body">
+            <div class="fs-3 fw-bold">${{ summary.total_pending|number_format(2) }}</div>
+            <div>Dinero pendiente total</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Ultimas deudas</div>
+      <div class="card-body p-0">
+        {% if debts|length > 0 %}
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover table-sm mb-0 no-datatable">
+            <thead>
+              <tr><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Deuda</th><th>Abonado</th><th>Pendiente</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+              {% for debt in debts|slice(0, 10) %}
+              <tr>
+                <td><a href="{{ base_url }}/beterrware/client/{{ debt.client_id }}">{{ debt.client_name }}</a></td>
+                <td>{{ debt.product_name|default('(sin producto)') }}</td>
+                <td>{{ debt.quantity }}</td>
+                <td>${{ debt.amount|number_format(2) }}</td>
+                <td>${{ debt.paid|number_format(2) }}</td>
+                <td class="fw-bold">{{ debt.status == 'pendiente' ? '$' ~ debt.pending|number_format(2) : '0.00' }}</td>
+                <td>
+                  {% if debt.status == 'pagada' %}
+                    <span class="badge bg-success">Pagada</span>
+                  {% else %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="alert alert-secondary m-3">Aun no hay deudas registradas. Empieza agregando <a href="{{ base_url }}/beterrware/products">productos</a>, <a href="{{ base_url }}/beterrware/clients">clientes</a> y luego <a href="{{ base_url }}/beterrware/debt/new">pedidos con deuda</a>.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /.bw-page -->
+{% endblock %}

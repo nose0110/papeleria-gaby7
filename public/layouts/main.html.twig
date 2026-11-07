@@ -13,6 +13,10 @@
     <link rel="stylesheet" href="assets/css/vendors/simplebar.css">
     <link href="assets/css/style.css" rel="stylesheet">
     <link href="assets/css/custom-inventio.css" rel="stylesheet">
+    {% if module_mobile_css is defined and module_mobile_css %}
+    <!-- Estilos mobile EXCLUSIVOS del modulo (no afectan el resto del sistema) -->
+    <link href="{{ module_mobile_css }}" rel="stylesheet">
+    {% endif %}
     <script src="assets/vendor/jquery/jquery.min.js"></script>
     <link rel="stylesheet" type="text/css" href="assets/bootstrap-icons/bootstrap-icons.css">
     <link rel="stylesheet" type="text/css" href="assets/vendor/datatables/datatables.min.css">
@@ -83,6 +87,18 @@
           <ul class="nav-group-items compact">
             <li class="nav-item"><a class="nav-link" href="{{ base_url }}/reports/movements"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Movimientos</a></li>
             <li class="nav-item"><a class="nav-link" href="{{ base_url }}/reports/sales"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Reporte de Ventas</a></li>
+          </ul>
+        </li>
+
+        <li class="nav-group">
+          <a class="nav-link nav-group-toggle" href="#">
+            <i class="nav-icon bi bi-flower1"></i> Beterrware
+          </a>
+          <ul class="nav-group-items compact">
+            <li class="nav-item"><a class="nav-link" href="{{ base_url }}/beterrware"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Panel</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ base_url }}/beterrware/products"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Productos</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ base_url }}/beterrware/clients"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Clientes</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ base_url }}/beterrware/debts"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Deudas y Abonos</a></li>
           </ul>
         </li>
 
