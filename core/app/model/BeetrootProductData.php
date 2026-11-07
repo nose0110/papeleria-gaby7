@@ -29,7 +29,7 @@ class BeetrootProductData {
         }
 
         /** Buscador para el selector de productos: por nombre o codigo (insensible a mayusculas). */
-        public static function search(string $term, int $limit = 30): array {
+        public static function search(string $term, int $limit = 5000): array {
                 $sql = "select * from ".self::$tablename." where is_active = 1";
                 $params = [];
                 $term = trim($term);
