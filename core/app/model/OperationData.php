@@ -15,6 +15,9 @@ class OperationData {
 		$this->product_id = "";
 		$this->q = "";
 		$this->operation_type_id = "";
+		// sell_id debe quedar NULL real (no la cadena 'NULL', que MySQL convierte a 0
+		// y viola la foreign key si no existe un sell con id=0).
+		$this->sell_id = null;
 		$this->created_at = "NOW()";
 	}
 
