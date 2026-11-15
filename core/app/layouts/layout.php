@@ -5,9 +5,9 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <meta name="description" content="Inventio Lite - Sistema de Inventario y Ventas">
+    <meta name="description" content="papeleriagaby - Sistema de Inventario y Ventas">
     <meta name="author" content="Evilnapsis">
-    <title>Inventio Lite - Dashboard</title>
+    <title>papeleriagaby - Dashboard</title>
     <!-- Vendors styles-->
     <link rel="stylesheet" href="assets/vendor/simplebar/css/simplebar.css">
     <link rel="stylesheet" href="assets/css/vendors/simplebar.css">
@@ -27,8 +27,8 @@
     <div class="sidebar sidebar-dark sidebar-fixed border-end" id="sidebar">
       <div class="sidebar-header border-bottom">
         <div class="sidebar-brand">
-          <span class="sidebar-brand-full" style="font-size:20px; font-weight: bold;"><i class="bi bi-box-seam me-2"></i>INVENTIO<span class="text-primary">LITE</span></span>
-          <span class="sidebar-brand-narrow">IL</span>
+          <span class="sidebar-brand-full" style="font-size:20px; font-weight: bold;"><i class="bi bi-box-seam me-2"></i>PAPERERIA<span class="text-primary">GABY</span></span>
+          <span class="sidebar-brand-narrow">PG</span>
         </div>
         <button class="btn-close d-lg-none" type="button" data-coreui-dismiss="offcanvas" data-coreui-theme="dark" aria-label="Close" onclick="coreui.Sidebar.getInstance(document.querySelector(&quot;#sidebar&quot;)).toggle()"></button>
       </div>
@@ -147,7 +147,7 @@
         </div>
       </div>
       <footer class="footer px-4 border-top-0 bg-transparent text-muted small">
-        <div>Inventio Lite © 2026. Desarrollado por <a href="https://evilnapsis.com/" target="_blank" class="text-decoration-none">Evilnapsis</a></div>
+        <div>papeleriagaby © 2026.</div>
         <div class="ms-auto">v4.2</div>
       </footer>
     </div>
@@ -160,7 +160,7 @@
               <div class="card-body p-5">
                 <div class="text-center mb-4">
                   <div class="display-1 text-primary mb-2"><i class="bi bi-box-seam-fill"></i></div>
-                  <h1 class="h3 fw-bold">Inventio Lite</h1>
+                  <h1 class="h3 fw-bold">papeleriagaby</h1>
                   <p class="text-muted">Sistema de Inventario y Ventas</p>
                 </div>
                 <form method="post" action="./?action=processlogin">

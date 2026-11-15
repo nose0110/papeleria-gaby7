@@ -11,7 +11,7 @@ if(isset($_GET["id"]) && $_GET["id"]!=""){
     
     // Fetch store name
     $title_config = ConfigurationData::getByShort("title");
-    $store_name = $title_config ? $title_config->val : "INVENTIO LITE";
+    $store_name = $title_config ? $title_config->val : "PAPERERIAGABY";
     
     // Calculate page height dynamically
     $item_count = count($operations);
