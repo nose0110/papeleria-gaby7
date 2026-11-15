@@ -19,7 +19,31 @@ class ViewEngine {
 				'debug' => true,
 			]);
 
-			$baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+			// base_url: se calcula a partir de la ubicacion REAL del proyecto, no de
+			// SCRIPT_NAME. Motivo: cuando la peticion llega por una ruta amigable
+			// (/beterrware/products) y el controlador termina usando el layout portado
+			// (public/layouts/main.html.twig) con <base href="{{ base_url }}/"> y assets
+			// relativos ("assets/css/style.css"), un SCRIPT_NAME de "/index.php" deja el
+			// prefijo vacio y el navegador resuelve todo contra la carpeta equivocada.
+			// Al renombrar/mover el proyecto (inventario live -> Papeleria Gabi) eso hace
+			// que unas navegaciones carguen los recursos y otras no (de ahi que en el
+			// telefono no se vea lo mismo que en el PC). Ahora siempre da el prefijo real.
+			$veSelfDir = str_replace('\\', '/', dirname(__DIR__, 2)); // raiz del proyecto
+			$veDocRoot = isset($_SERVER['DOCUMENT_ROOT'])
+					? rtrim(str_replace('\\', '/', (string)$_SERVER['DOCUMENT_ROOT']), '/')
+					: '';
+			if ($veDocRoot !== '' && stripos($veSelfDir, $veDocRoot) === 0) {
+					$baseUrl = rtrim(substr($veSelfDir, strlen($veDocRoot)), '/');
+			} else {
+					// Docroot fuera del proyecto (ciertos hostings): se deduce del REQUEST_URI
+					// recortando desde la primera coincidencia con la raiz real.
+					$baseUrl = rtrim(dirname(str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''))), '/');
+					$reqUri = rawurldecode((string)($_SERVER['REQUEST_URI'] ?? ''));
+					if (($baseUrl === '' || $baseUrl === '.') && $reqUri !== '') {
+						$pos = strpos($reqUri, '/index.php');
+						if ($pos !== false) $baseUrl = rtrim(substr($reqUri, 0, $pos), '/');
+					}
+			}
 			self::$twig->addGlobal('base_url', $baseUrl);
 
 			self::$twig->addGlobal('csrf_token', Session::csrfToken());
