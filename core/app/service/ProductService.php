@@ -39,7 +39,7 @@ class ProductService {
 			$operation->product_id = $product->id;
 			$operation->operation_type_id = \OperationTypeData::getByName('entrada')->id;
 			$operation->q = $initialStock;
-			$operation->sell_id = 'NULL';
+			// No asignar sell_id: queda NULL (la entrada inicial no pertenece a ninguna venta).
 			$operation->add();
 		}
 
