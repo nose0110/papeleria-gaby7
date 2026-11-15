@@ -53,10 +53,6 @@
               {% endfor %}
             </select>
           </div>
-          <div class="mb-3">
-            <label class="form-label small text-primary fw-bold">Efectivo Pagado</label>
-            <input type="number" name="money" required class="form-control" id="money_repos" step="0.01">
-          </div>
           <input type="hidden" name="total" value="{{ total }}">
           <button type="submit" class="btn btn-success w-100">
             <i class="bi bi-check-circle me-1"></i> PROCESAR COMPRA
@@ -74,28 +70,21 @@
 
 <script>
 	$("#processrepos").submit(function(e){
-		var money = $("#money_repos").val();
-    var total = {{ total }};
-		if(parseFloat(money) < total){
-			Swal.fire('Error', 'El efectivo pagado es insuficiente.', 'error');
-			e.preventDefault();
-		}else{
-      var cambio = parseFloat(money) - total;
-      e.preventDefault();
-      Swal.fire({
-        title: 'Confirmar Compra',
-        text: 'Cambio: $' + cambio.toFixed(2),
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Sí, finalizar',
-        cancelButtonText: 'Cancelar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.submit();
-        }
-      });
-		}
+		e.preventDefault();
+		var form = this;
+		Swal.fire({
+			title: 'Confirmar Ingreso de Inventario',
+			text: 'Se agregar\u00e1n los productos al inventario. \u00bfContinuar?',
+			icon: 'question',
+			showCancelButton: true,
+			confirmButtonColor: '#28a745',
+			cancelButtonColor: '#d33',
+			confirmButtonText: 'S\u00ed, procesar',
+			cancelButtonText: 'Cancelar'
+		}).then((result) => {
+			if (result.isConfirmed) {
+				form.submit();
+			}
+		});
 	});
 </script>
