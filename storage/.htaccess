@@ -1,0 +1,8 @@
+# Protege el storage del modulo Beterrware: bloquea ejecucion de scripts.
+# Las imagenes (.jpg) siguen siendo accesibles desde el navegador.
+Options -Indexes -ExecCGI
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|pl|py|cgi|sh|asp|aspx)$">
+    Require all denied
+</FilesMatch>
+RemoveHandler .php .phtml
+RemoveType .php .phtml

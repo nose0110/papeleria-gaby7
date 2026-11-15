@@ -1,0 +1,73 @@
+{% extends "layouts/main.html.twig" %}
+{% block title %}Beterrware - Productos{% endblock %}
+{% block content %}
+<div class="bw-page">
+
+<div class="row">
+  <div class="col-md-12">
+    <h1>Productos Beterrware</h1>
+    <a href="{{ base_url }}/beterrware/product/new" class="btn btn-secondary"><i class="bi bi-plus-lg"></i> Nuevo Producto</a>
+    <br><br>
+    <div class="card">
+      <div class="card-header">PRODUCTOS</div>
+      <div class="card-body p-0">
+        {% if products|length > 0 %}
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Imagen</th><th>Codigo</th><th>Nombre</th><th>Descripcion</th><th>Stock</th><th>Precio</th><th>Estado</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in products %}
+              <tr>
+                <td>
+                  {% if product.image %}
+                    <img src="{{ base_url }}/storage/beetroot/{{ product.image }}" alt="{{ product.name }}"
+                         class="rounded border" style="width:48px;height:48px;object-fit:cover;">
+                  {% else %}
+                    <span class="bi bi-image text-muted" style="font-size:1.5rem;"></span>
+                  {% endif %}
+                </td>
+                <td>{{ product.code|default('-') }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.description|default('') }}</td>
+                <td>
+                  {% if product.stock <= 0 %}
+                    <span class="badge bg-danger">{{ product.stock }}</span>
+                  {% else %}
+                    {{ product.stock }}
+                  {% endif %}
+                </td>
+                <td>${{ product.price|number_format(2) }}</td>
+                <td>
+                  {% if product.is_active %}
+                    <span class="badge bg-success">Activo</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Inactivo</span>
+                  {% endif %}
+                </td>
+                <td style="width:170px;">
+                  <a href="{{ base_url }}/beterrware/product/{{ product.id }}/edit" class="btn btn-warning btn-xs">Editar</a>
+                  {% if product.is_active %}
+                  <form action="{{ base_url }}/beterrware/product/{{ product.id }}/delete" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar este producto?');">
+                    {{ csrf_field() }}
+                    <button type="submit" class="btn btn-danger btn-xs">Eliminar</button>
+                  </form>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="alert alert-danger m-3">No hay productos. Agrega el primero.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /.bw-page -->
+{% endblock %}

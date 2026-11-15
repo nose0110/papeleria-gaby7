@@ -33,8 +33,24 @@ class ViewEngine {
 		return self::$twig;
 	}
 
+	/**
+	 * Modulos con CSS mobile exclusivo (carpeta de vistas => archivo CSS).
+	 * Solo afecta a las vistas del modulo indicado; el resto del sistema
+	 * conserva exactamente los mismos estilos de siempre.
+	 */
+	private const MOBILE_CSS = [
+		'beetroot/' => 'assets/css/beetroot-mobile.css',
+	];
+
 	public static function render(string $template, array $data = []): void {
 		$twig = self::init();
+
+		// Inyecta el CSS mobile exclusivo segun la carpeta de la vista
+		$mobileCss = null;
+		foreach (self::MOBILE_CSS as $folder => $css) {
+			if (strpos($template, $folder) === 0) { $mobileCss = $css; break; }
+		}
+		$twig->addGlobal('module_mobile_css', $mobileCss);
 		$twig->addGlobal('curr_user', isset($_SESSION['user_id']) ? UserData::getById($_SESSION['user_id']) : null);
 
 		foreach (['success', 'updated', 'deleted', 'error'] as $key) {

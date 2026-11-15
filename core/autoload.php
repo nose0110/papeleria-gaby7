@@ -3,6 +3,9 @@
 require_once __DIR__ . "/../vendor/autoload.php";
 
 include "controller/Core.php";
+// Cargador .env: debe incluirse ANTES de usar Database (usa getenv)
+include "controller/Env.php";
+Env::load();
 include "controller/Database.php";
 include "controller/Executor.php";
 //# include "controller/Session.php"; [remplazada]

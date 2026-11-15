@@ -74,6 +74,7 @@ if ($routeInfo[0] === FastRoute\Dispatcher::FOUND) {
 		App\Controller\AlertController::class,
 		App\Controller\SettingsController::class,
 		App\Controller\ProfileController::class,
+		App\Controller\BeetrootController::class,
 	];
 	$handler = $routeInfo[1];
 	if (in_array($handler[0], $protectedControllers, true) && !AuthService::check()) {

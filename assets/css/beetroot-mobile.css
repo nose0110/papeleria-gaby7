@@ -1,0 +1,128 @@
+/* ============================================================
+   BETERRWARE - Ajustes mobile del modulo (solo <= 768px)
+   Este archivo NO toca los estilos de Inventio Lite.
+   Se aplica unicamente a las vistas con .bw-page (modulo Beterrware).
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+  /* Tipografia y espaciado general del modulo */
+  .bw-page h1 { font-size: 1.35rem; }
+  .bw-page .card-header { padding: .6rem .8rem; font-size: .9rem; }
+  .bw-page .card-body { padding: .8rem; }
+
+  /* Tarjetas KPI del dashboard: 2 por fila en celular */
+  .bw-page .row > .col-md-3 { flex: 0 0 50%; max-width: 50%; }
+
+  /* Tablas: fuente compacta, sin desbordes feos */
+  .bw-page .table { font-size: .85rem; margin-bottom: 0; }
+  .bw-page .table > thead > tr > th,
+  .bw-page .table > tbody > tr > td {
+    white-space: nowrap;           /* el scroll horizontal ya lo da .table-responsive */
+    vertical-align: middle;
+    padding: .45rem .5rem;
+  }
+  /* Descripcion de producto puede respirar en dos lineas */
+  .bw-page .table td.bw-desc { white-space: normal; min-width: 140px; max-width: 200px; }
+
+  /* Botones de accion tipo "pildora" para tocar facil con el dedo */
+  .bw-page .btn-xs,
+  .bw-page .table .btn {
+    padding: .3rem .6rem;
+    font-size: .8rem;
+    border-radius: 2rem;
+  }
+  .bw-page .btn-block-mobile { display: block; width: 100%; }
+
+  /* Formularios: campos grandes y faciles de teclear */
+  .bw-page .form-control,
+  .bw-page .form-select,
+  .bw-page select,
+  .bw-page textarea {
+    font-size: 16px !important;    /* evita zoom automatico de iOS/Android al enfocar */
+    padding: .55rem .7rem;
+  }
+  .bw-page label { font-size: .85rem; }
+
+  /* Buscador AJAX de productos (pedido con deuda) */
+  #search-results { max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #search-results .list-group-item { padding: .5rem .6rem; }
+
+  /* Carrito de productos del pedido: en vez de tabla apilada,
+     cada linea se ve como una tarjeta */
+  #bw-cart-table,
+  #bw-cart-table thead,
+  #bw-cart-table tbody,
+  #bw-cart-table tr,
+  #bw-cart-table th,
+  #bw-cart-table td { display: block; width: 100%; }
+  #bw-cart-table thead { display: none; }
+  #bw-cart-table tr.bw-cart-row {
+    background: #f8f9fa;
+    border: 1px solid #e3e6ea;
+    border-radius: .5rem;
+    padding: .6rem .7rem;
+    margin-bottom: .5rem;
+    position: relative;
+  }
+  #bw-cart-table tr.bw-cart-row td {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .15rem 0;
+    border: 0;
+    white-space: normal;
+    background: transparent;
+  }
+  #bw-cart-table tr.bw-cart-row td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: .75rem;
+    color: #6c757d;
+    min-width: 60px;
+  }
+  #bw-cart-table tr.bw-cart-row td.td-remove {
+    position: absolute;
+    top: .4rem;
+    right: .4rem;
+  }
+  #bw-cart-table tr.bw-cart-row td.td-remove::before { content: ""; min-width: 0; }
+
+  /* Controles de cantidad +/- mas grandes para el dedo */
+  #bw-cart-table .btn-qty {
+    min-width: 38px;
+    min-height: 38px;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+  #bw-cart-table input.qty-input {
+    width: 60px;
+    text-align: center;
+    min-height: 38px;
+  }
+  #bw-cart-table input.price-input {
+    width: 95px;
+    min-height: 38px;
+  }
+
+  /* Fila vacia del carrito */
+  #bw-cart-table #empty-row td { display: block; text-align: center; }
+
+  /* Cabeceras con boton a la derecha sin romperse */
+  .bw-page .card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .4rem; }
+
+  /* Totales del pedido pegajosos abajo para verlos siempre */
+  #bw-total-box {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: #fff;
+    border-top: 2px solid #dee2e6;
+    padding: .6rem .2rem;
+  }
+}
+
+/* Tablet chica / celular horizontal */
+@media (max-width: 992px) and (min-width: 769px) {
+  .bw-page .row > .col-md-3 { flex: 0 0 50%; max-width: 50%; }
+}
