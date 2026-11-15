@@ -81,15 +81,41 @@ class ProductData {
 
 	// partiendo de que ya tenemos creado un objecto ProductData previamente utilizamos el contexto
 	public function update(){
-		$stmt = self::db()->prepare(
-			"update ".self::$tablename." set barcode=:barcode, name=:name, price_in=:price_in, price_out=:price_out, ".
-			"unit=:unit, presentation=:presentation, category_id=:category_id, inventary_min=:inventary_min, ".
-			"description=:description, is_active=:is_active where id=:id"
-		);
-		$stmt->execute($this->bindableFields() + [
-			'is_active' => $this->is_active,
-			'id' => $this->id,
+		// UPDATE dinámico: construye el SET solo con los campos que se pasan,
+		// evitando HY093 (numero de parametros != numero de tokens) cuando este
+		// archivo queda desincronizado con ProductService.php en el servidor.
+		return $this->updateFields([
+			'barcode'       => $this->barcode,
+			'name'          => $this->name,
+			'price_in'      => $this->price_in,
+			'price_out'     => $this->price_out,
+			'unit'          => $this->unit,
+			'presentation'  => $this->presentation,
+			'category_id'   => ($this->category_id === '' || $this->category_id === 'NULL') ? null : $this->category_id,
+			'inventary_min' => ($this->inventary_min === '' || $this->inventary_min === '""') ? null : $this->inventary_min,
+			'description'   => $this->description,
+			'is_active'     => $this->is_active,
 		]);
+	}
+
+	public function updateFields(array $fields){
+		if (($this->id ?? null) === null || $this->id === '') return false;
+
+		// Lista blanca de columnas actualizables (nunca se inyectan nombres arbitrarios).
+		$allowed = ['barcode','image','name','description','price_in','price_out','unit',
+				'presentation','category_id','inventary_min','is_active'];
+		$set = [];
+		$params = [];
+		foreach ($fields as $col => $val) {
+			if (!in_array($col, $allowed, true)) continue;
+			$set[] = "$col = :$col";
+			$params[":$col"] = $val;
+		}
+		if (!$set) return false;
+
+		$params[':id'] = $this->id;
+		$stmt = self::db()->prepare("update ".self::$tablename." set ".implode(', ', $set)." where id = :id");
+		return $stmt->execute($params);
 	}
 
 	public function del_category(){
