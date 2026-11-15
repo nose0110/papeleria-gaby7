@@ -124,6 +124,27 @@ if ($bwDocRoot !== '' && stripos($bwSelfDir, $bwDocRoot) === 0) {
     }
 }
 
+// Version de las imagenes (anti-cache).
+// Motivo: al renombrar el proyecto (de "inventario live" a "Papeleria Gabi") se
+// movieron/cambiaron archivos en storage/beetroot/, pero los navegadores —y sobre
+// todo la cache de Android y los optimizadores tipo "Lite Mode" de Opera/Chrome
+// movil— siguen sirviendo la respuesta vieja de la imagen desde su cache local.
+// Por eso la vitrina se ve con imagenes en un navegador y sin ellas en otro o en
+// el telefono, aunque el HTML sea el mismo. Al agregar ?v=<hash del archivo> cada
+// vez que una imagen cambia, la URL nueva obliga a todos los navegadores a volver
+// a descargarla; mientras la imagen no cambie, el hash es estable y no se pierde
+// el beneficio de la cache.
+if (!function_exists('bwImgVer')) {
+    function bwImgVer(?string $relFile): string {
+        static $cache = [];
+        if ($relFile === null || $relFile === '') return '';
+        if (isset($cache[$relFile])) return $cache[$relFile];
+        $path = BW_ROOT . '/storage/beetroot/' . $relFile;
+        $ver = is_file($path) ? substr(md5_file($path), 0, 10) : 'stale';
+        return $cache[$relFile] = $ver;
+    }
+}
+
 // Moneda: igual que el resto del modulo Beterrware (usa "$")
 function bwMoney($v): string {
     return '$' . number_format((float)$v, 2);
@@ -149,9 +170,29 @@ function bwImageSrc($image, string $bwBase): ?string {
     $file = str_replace('\\', '/', $image);
     $file = preg_replace('#^\./#', '', $file);
     $file = ltrim($file, '/');
-    $file = preg_replace('#^storage/beetroot/#', '', $file);
+    $file = preg_replace('#^/?storage/beetroot/#', '', $file);
+    // Rutas del nucleo antiguo ("./storage/products/x.jpg"): la imagen existe pero
+    // en otra carpeta; si se fuerza a storage/beetroot/ da 404 SOLO en algunos
+    // navegadores (los que ya la tenian cacheada la muestran, los demas no).
+    if (preg_match('#^storage/products/#', $file)) {
+        $url = $bwBase . '/' . implode('/', array_map('rawurlencode', explode('/', $file)));
+        return $url . '?v=' . bwImgVer($file, BW_ROOT);
+    }
     if ($file === '') return null;
-    return $bwBase . '/storage/beetroot/' . implode('/', array_map('rawurlencode', explode('/', $file)));
+    $url = $bwBase . '/storage/beetroot/' . implode('/', array_map('rawurlencode', explode('/', $file)));
+    // ?v=<hash>: fuerza re-descarga cuando la imagen cambio (anti-cache en el telefono)
+    return $url . '?v=' . bwImgVer($file);
+}
+
+// Cabeceras anti-cache para la vitrina. La pagina es dinamica (los productos
+// cambian) y durante la migracion de nombre (inventario live -> Papeleria Gabi)
+// muchos navegadores/telefonos se quedaron con la version vieja del HTML en su
+// cache, que apuntaba a rutas de imagen antiguas. Con esto la vitrina siempre se
+// vuelve a pedir al servidor; las imagenes si pueden cachearse porque llevan ?v=.
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
 }
 
 // Tarjeta compacta reutilizable (usada en "Ultimos productos" y en la grilla)
