@@ -99,8 +99,30 @@ try {
     $dbError = true;
 }
 
-// base_url para las imagenes (funciona en raiz o en subcarpeta tipo /inventio-lite)
-$bwBase = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+// base_url para las imagenes (funciona en raiz o en subcarpeta tipo /inventio-lite).
+// Se calcula SIEMPRE a partir de la ubicacion REAL del archivo (no de _SERVER["SCRIPT_NAME"]).
+// Motivo: al compartir el mismo prefijo de ruta (/beterrware...) con el modulo interno,
+// una peticion reescrita por mod_rewrite hacia index.php puede terminar ejecutando esta
+// vitrina; ahi SCRIPT_NAME es "/index.php", dirname() queda vacio y las rutas de imagen
+// se arman sin prefijo. En una instalacion dentro de una subcarpeta eso apunta a una URL
+// inexistente y la vitrina deja de mostrar las imagenes (mientras que la pagina de
+// edicion, renderizada por Twig con su propio base_url, si las muestra).
+$bwSelfDir = str_replace('\\', '/', dirname(__FILE__));
+$bwDocRoot = isset($_SERVER['DOCUMENT_ROOT'])
+    ? rtrim(str_replace('\\', '/', (string)$_SERVER['DOCUMENT_ROOT']), '/')
+    : '';
+if ($bwDocRoot !== '' && stripos($bwSelfDir, $bwDocRoot) === 0) {
+    // El proyecto esta dentro del docroot: prefijo = subcarpeta de instalacion
+    $bwBase = rtrim(substr($bwSelfDir, strlen($bwDocRoot)), '/');
+} else {
+    // Docroot fuera/oculto (algunos hostings): se deduce del REQUEST_URI recortando
+    // desde el nombre del script; si no coincide, se asume instalacion en la raiz.
+    $bwBase = '';
+    $reqUri = rawurldecode((string)($_SERVER['REQUEST_URI'] ?? ''));
+    if ($reqUri !== '' && ($pos = stripos($reqUri, '/beterrware.php')) !== false) {
+        $bwBase = rtrim(substr($reqUri, 0, $pos), '/');
+    }
+}
 
 // Moneda: igual que el resto del modulo Beterrware (usa "$")
 function bwMoney($v): string {
@@ -112,15 +134,37 @@ function bwLower(string $s): string {
     return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
 }
 
+/**
+ * URL de la imagen del producto para la vitrina.
+ * Devuelve null solo si el producto nunca tuvo imagen. Si tiene valor guardado
+ * se devuelve siempre la URL (normalizada), incluso cuando el archivo no este
+ * presente: asi un borrado temporal, un cambio de permisos/ruta o un valor
+ * guardado con prefijo ("./storage/...", "storage/beetroot/...") no hace que
+ * la vitrina "esconda" imagenes que la pagina de edicion si muestra.
+ */
+function bwImageSrc($image, string $bwBase): ?string {
+    $image = trim((string)$image);
+    if ($image === '') return null;
+    // Normaliza el valor guardado en BD
+    $file = str_replace('\\', '/', $image);
+    $file = preg_replace('#^\./#', '', $file);
+    $file = ltrim($file, '/');
+    $file = preg_replace('#^storage/beetroot/#', '', $file);
+    if ($file === '') return null;
+    return $bwBase . '/storage/beetroot/' . implode('/', array_map('rawurlencode', explode('/', $file)));
+}
+
 // Tarjeta compacta reutilizable (usada en "Ultimos productos" y en la grilla)
 function bwCard(array $p, string $bwBase, bool $compact = false, bool $isNew = false): string {
+    $imgSrc = bwImageSrc($p['image'] ?? null, $bwBase);
     ob_start(); ?>
     <div class="card bw-card h-100<?= $compact ? ' bw-card-sm' : '' ?>">
         <div class="bw-img-wrap<?= $compact ? ' py-3' : '' ?>">
             <?php if ($isNew): ?><span class="badge rounded-pill bw-badge-new"><i class="bi bi-stars"></i> Nuevo</span><?php endif; ?>
-            <?php if (!empty($p['image']) && is_file(BW_ROOT . '/storage/beetroot/' . $p['image'])): ?>
-                <img src="<?= htmlspecialchars($bwBase . '/storage/beetroot/' . $p['image']) ?>"
-                     alt="<?= htmlspecialchars($p['name']) ?>" loading="lazy">
+            <?php if ($imgSrc !== null): ?>
+                <img src="<?= htmlspecialchars($imgSrc) ?>"
+                     alt="<?= htmlspecialchars($p['name']) ?>" loading="lazy"
+                     onerror="this.replaceWith(Object.assign(document.createElement('i'), {className:'bi bi-image'}))">
             <?php else: ?>
                 <i class="bi bi-image"></i>
             <?php endif; ?>
