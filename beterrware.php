@@ -55,13 +55,46 @@ try {
         );
     }
     // SELECT puro: esta pagina no puede escribir nada.
-    $stmt = $pdo->query(
-        "select name, description, price, code, image
-         from bw_product
-         where is_active = 1 and stock > 0
-         order by name asc"
-    );
+    $cols = 'id, name, description, price, code, image';
+    try {
+        // created_at existe en el esquema completo; si faltara, se degrada a id
+        $stmt = $pdo->query(
+            "select {$cols}, created_at
+             from bw_product
+             where is_active = 1 and stock > 0
+             order by name asc"
+        );
+    } catch (Throwable $e) {
+        $stmt = $pdo->query(
+            "select {$cols}
+             from bw_product
+             where is_active = 1 and stock > 0
+             order by name asc"
+        );
+    }
     $products = $stmt->fetchAll();
+
+    // Ultimos productos agregados (los mas recientes registrados)
+    $recent = [];
+    if (!empty($products)) {
+        $hasDates = false;
+        foreach ($products as $p) {
+            if (!empty($p['created_at'])) { $hasDates = true; break; }
+        }
+        if ($hasDates) {
+            usort($products, function ($a, $b) {
+                return strcmp((string)($b['created_at'] ?? ''), (string)($a['created_at'] ?? ''));
+            });
+        } else {
+            usort($products, function ($a, $b) {
+                return (int)($b['id'] ?? 0) <=> (int)($a['id'] ?? 0);
+            });
+        }
+        $recent = array_slice($products, 0, min(8, count($products)));
+        usort($products, function ($a, $b) {
+            return strcasecmp((string)$a['name'], (string)$b['name']);
+        });
+    }
 } catch (Throwable $e) {
     $dbError = true;
 }
@@ -77,6 +110,35 @@ function bwMoney($v): string {
 // Minusculas sin depender de mbstring (por si el hosting no lo trae habilitado)
 function bwLower(string $s): string {
     return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+}
+
+// Tarjeta compacta reutilizable (usada en "Ultimos productos" y en la grilla)
+function bwCard(array $p, string $bwBase, bool $compact = false, bool $isNew = false): string {
+    ob_start(); ?>
+    <div class="card bw-card h-100<?= $compact ? ' bw-card-sm' : '' ?>">
+        <div class="bw-img-wrap<?= $compact ? ' py-3' : '' ?>">
+            <?php if ($isNew): ?><span class="badge rounded-pill bw-badge-new"><i class="bi bi-stars"></i> Nuevo</span><?php endif; ?>
+            <?php if (!empty($p['image']) && is_file(BW_ROOT . '/storage/beetroot/' . $p['image'])): ?>
+                <img src="<?= htmlspecialchars($bwBase . '/storage/beetroot/' . $p['image']) ?>"
+                     alt="<?= htmlspecialchars($p['name']) ?>" loading="lazy">
+            <?php else: ?>
+                <i class="bi bi-image"></i>
+            <?php endif; ?>
+        </div>
+        <div class="card-body d-flex flex-column">
+            <h2 class="bw-name h6 mb-1"><?= htmlspecialchars($p['name']) ?></h2>
+            <?php if (!$compact): ?>
+                <p class="bw-desc mb-2"><?= htmlspecialchars($p['description'] ?: '') ?></p>
+            <?php endif; ?>
+            <div class="mt-auto d-flex justify-content-between align-items-end">
+                <span class="bw-price<?= $compact ? ' small' : '' ?>"><?= bwMoney($p['price']) ?></span>
+                <?php if (!empty($p['code'])): ?>
+                    <span class="bw-code"><i class="bi bi-upc-scan"></i> <?= htmlspecialchars($p['code']) ?></span>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php return ob_get_clean();
 }
 ?>
 <!DOCTYPE html>
@@ -105,9 +167,20 @@ function bwLower(string $s): string {
         background: #fff;
     }
     .bw-card:hover { transform: translateY(-4px); box-shadow: 0 8px 22px rgba(109, 16, 48, .16); }
-    .bw-img-wrap { background: var(--bw-light); display: flex; align-items: center; justify-content: center; height: 190px; }
+    .bw-img-wrap { background: var(--bw-light); display: flex; align-items: center; justify-content: center; height: 190px; position: relative; }
     .bw-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
     .bw-img-wrap .bi { font-size: 3rem; color: #d9a4b7; }
+    .bw-badge-new {
+        position: absolute; top: .5rem; left: .5rem; z-index: 2;
+        background: var(--bw-primary); color: #fff; font-size: .68rem;
+        padding: .3rem .6rem; box-shadow: 0 2px 6px rgba(109,16,48,.3);
+    }
+    .bw-recent-box {
+        background: linear-gradient(135deg, #fdf2f6, #fbe4ec);
+        border: 1px solid #f3c6d6; border-radius: 1.25rem; padding: 1.1rem 1.1rem .4rem;
+    }
+    .bw-recent-title { color: var(--bw-dark); font-weight: 800; }
+    .bw-card-sm .bw-img-wrap { height: 110px; }
     .bw-price { color: var(--bw-primary); font-weight: 800; font-size: 1.25rem; }
     .bw-name { font-weight: 700; color: #2d2d2d; }
     .bw-desc { color: #6b6b6b; font-size: .9rem; min-height: 2.6em; }
@@ -134,6 +207,19 @@ function bwLower(string $s): string {
         </div>
     <?php else: ?>
 
+        <?php if (!empty($recent)): ?>
+        <section class="bw-recent-box mb-4">
+            <h2 class="bw-recent-title h5 mb-3">
+                <i class="bi bi-stars"></i> Últimos productos agregados
+            </h2>
+            <div class="row g-2 row-cols-2 row-cols-sm-3 row-cols-lg-4 mb-2">
+                <?php foreach ($recent as $r): ?>
+                    <div class="col"><?= bwCard($r, $bwBase, compact: true, isNew: true) ?></div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php endif; ?>
+
         <?php if (count($products) > 4): ?>
         <div class="text-center mb-4">
             <div class="input-group bw-search mx-auto">
@@ -152,26 +238,7 @@ function bwLower(string $s): string {
             <div class="row g-3" id="bwGrid">
                 <?php foreach ($products as $p): ?>
                 <div class="col-6 col-md-4 col-lg-3 bw-item" data-search="<?= htmlspecialchars(bwLower($p['name'] . ' ' . $p['description'] . ' ' . $p['code']), ENT_QUOTES) ?>">
-                    <div class="card bw-card">
-                        <div class="bw-img-wrap">
-                            <?php if ($p['image'] && is_file(BW_ROOT . '/storage/beetroot/' . $p['image'])): ?>
-                                <img src="<?= htmlspecialchars($bwBase . '/storage/beetroot/' . $p['image']) ?>"
-                                     alt="<?= htmlspecialchars($p['name']) ?>" loading="lazy">
-                            <?php else: ?>
-                                <i class="bi bi-image"></i>
-                            <?php endif; ?>
-                        </div>
-                        <div class="card-body d-flex flex-column">
-                            <h2 class="bw-name h6 mb-1"><?= htmlspecialchars($p['name']) ?></h2>
-                            <p class="bw-desc mb-2"><?= htmlspecialchars($p['description'] ?: '') ?></p>
-                            <div class="mt-auto d-flex justify-content-between align-items-end">
-                                <span class="bw-price"><?= bwMoney($p['price']) ?></span>
-                                <?php if ($p['code']): ?>
-                                    <span class="bw-code"><i class="bi bi-upc-scan"></i> <?= htmlspecialchars($p['code']) ?></span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
+                    <?= bwCard($p, $bwBase) ?>
                 </div>
                 <?php endforeach; ?>
             </div>
