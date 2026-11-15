@@ -35,18 +35,12 @@
       </table>
 
       <div class="p-3 bg-light border-top">
-        <div class="d-flex justify-content-between mb-1">
-          <span>Subtotal:</span>
-          <span>$ {{ (total * 0.84)|number_format(2) }}</span>
-        </div>
-        <div class="d-flex justify-content-between mb-1">
-          <span>IVA (16%):</span>
-          <span>$ {{ (total * 0.16)|number_format(2) }}</span>
-        </div>
-        <div class="d-flex justify-content-between h5 mt-2 pt-2 border-top">
+        {# El precio del producto ya incluye IVA: no se desglosa ni se suma nada extra. #}
+        <div class="d-flex justify-content-between h5">
           <span class="fw-bold">TOTAL:</span>
           <span class="fw-bold text-primary">$ {{ total|number_format(2) }}</span>
         </div>
+        <div class="small text-muted mt-1">Precios con IVA incluido.</div>
       </div>
 
       <div class="p-3">
